@@ -53,20 +53,25 @@ class playGame extends Phaser.Scene {
     // rootNode.replies.push(makeNode());
     // rootNode.replies.push(makeNode());
     // rootNode.replies.push(makeNode());
-    var graphics = this.add.graphics({fillStyle: { color: 0x00ff00 } });
 
-    var circle = new Phaser.Geom.Circle(100, 100, 25);
+    this.graphics = this.add.graphics({fillStyle: { color: 0x00ff00 } });
+    this.circles = [];
+    this.circles.push(new Phaser.Geom.Circle(100, 100, 25));
+    this.circles.push(new Phaser.Geom.Circle(700, 100, 50));
+    this.circles.push(new Phaser.Geom.Circle(700, 700, 75));
+    this.circles.push(new Phaser.Geom.Circle(100, 700, 100));
+  }
 
-    graphics.fillCircleShape(circle);
-
-    circle.setTo(700, 100, 50);
-    graphics.fillCircleShape(circle);
-
-    circle.setTo(700, 700, 75);
-    graphics.fillCircleShape(circle);
-
-    circle.setTo(100, 700, 100);
-    graphics.fillCircleShape(circle);
+  update() {
+    this.graphics.clear();
+    for(var i=0; i < this.circles.length; i++) {
+      this.graphics.fillCircleShape(this.circles[i]);
+    }
+    if (isRotated) {
+      this.graphics.fillCircleShape(new Phaser.Geom.Circle(gameOptions.pixelsWide/2, pixelsTall-25, 25));
+    } else {
+      this.graphics.fillCircleShape(new Phaser.Geom.Circle(pixelsTall-25, gameOptions.pixelsWide/2, 25));
+    }
   }
 }
 
@@ -109,13 +114,20 @@ function resizeGame() {
   var windowHeight = window.innerHeight;
   var windowRatio = windowWidth / windowHeight;
 
-  var gameWidth = Math.floor(gameOptions.pixelsWide / windowRatio);
-  pixelsTall = gameWidth;
+  if (windowWidth < windowHeight) {
+    pixelsTall = Math.floor(gameOptions.pixelsWide / windowRatio);
+    game.scale.setGameSize(gameOptions.pixelsWide, pixelsTall);
+  }
+  else {
+    pixelsTall = Math.floor(gameOptions.pixelsWide * windowRatio);
+    game.scale.setGameSize(pixelsTall, gameOptions.pixelsWide);
+  }
 
-  game.scale.setGameSize(gameOptions.pixelsWide, pixelsTall);
 
-   canvas.style.width = "100%";
-   canvas.style.height = "100%";
+
+  //NB - setting it to 100% makes it look ugly mid-resize
+  canvas.style.width = windowWidth+"px";
+  canvas.style.height = windowHeight+"px";
 
   if (windowRatio <= 1) {
     if (!isRotated) {
