@@ -3,7 +3,7 @@ var gameOptions = {
   //this is how many pixels tall/wide the narrower of the two dimensions will be, according to the game
   //the canvas size will scale according to the window size but it will always seem this wide to the game logic
   //the long dimension will adjust automatically, see pixelsTall below
-  pixelsWide: 768
+  pixelsWide: 800
 }
 
 var pixelsTall = gameOptions.pixelsWide;
@@ -107,7 +107,7 @@ window.onload = function() {
   window.addEventListener("resize",resizeGame);
 }
 
-var isRotated = false;
+var isRotated = false; //true when in portrait mode
 function resizeGame() {
   var canvas = document.querySelector("canvas");
   var windowWidth = window.innerWidth;
@@ -123,22 +123,40 @@ function resizeGame() {
     game.scale.setGameSize(pixelsTall, gameOptions.pixelsWide);
   }
 
-
-
   //NB - setting it to 100% makes it look ugly mid-resize
   canvas.style.width = windowWidth+"px";
   canvas.style.height = windowHeight+"px";
 
-  if (windowRatio <= 1) {
-    if (!isRotated) {
-      //TODO - rotate everything downwards into portrait mode
+  if (game.scene.scenes.length > 1) {
+    if (windowRatio <= 1) {
+      if (!isRotated) {
+        //rotate everything counter-clockwise into portrait
+        for(var i = 0; i < game.scene.scenes[1].circles.length; i++) {
+          var c = game.scene.scenes[1].circles[i];
+          game.scene.scenes[1].tweens.add({
+            targets: c,
+            x: gameOptions.pixelsWide - c.y,
+            y: c.x,
+            duration: 100
+          })
+        }
+        isRotated = true;
+      }
     }
-    isRotated = true;
-  }
-  else {
-    if (isRotated) {
-      //TODO - unrotate everything back to portrait
+    else {
+      if (isRotated) {
+        // rotate everything clockwise into landscape
+        for(var i = 0; i < game.scene.scenes[1].circles.length; i++) {
+          var c = game.scene.scenes[1].circles[i];
+          game.scene.scenes[1].tweens.add({
+            targets: c,
+            x: c.y,
+            y: gameOptions.pixelsWide - c.x,
+            duration: 100
+          })
+        }
+        isRotated = false;
+      }
     }
-    isRotated = false;
   }
 }
