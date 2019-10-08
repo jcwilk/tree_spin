@@ -3,7 +3,8 @@ var gameOptions = {
   //this is how many pixels tall/wide the narrower of the two dimensions will be, according to the game
   //the canvas size will scale according to the window size but it will always seem this wide to the game logic
   //the long dimension will adjust automatically, see pixelsTall below
-  pixelsWide: 800
+  pixelsWide: 800,
+  newNodeTweenDuration: 100
 }
 
 var pixelsTall = gameOptions.pixelsWide;
@@ -76,7 +77,7 @@ class playGame extends Phaser.Scene {
     // rootNode.replies.push(makeNode());
     // rootNode.replies.push(makeNode());
 
-    this.graphics = this.add.graphics({fillStyle: { color: 0x00ff00 }, lineStyle: { width: 2, color: 0x00ffff }});
+    this.graphics = this.add.graphics({lineStyle: { width: 2, color: 0x00ffff }}); //{fillStyle: { color: 0x00ff00 },
     this.circles = [];
     this.lines = [];
 
@@ -92,9 +93,9 @@ class playGame extends Phaser.Scene {
     for(var i=0; i < this.lines.length; i++) {
       this.graphics.strokeLineShape(this.lines[i]);
     }
-    for(var i=0; i < this.circles.length; i++) {
-      this.graphics.fillCircleShape(this.circles[i]);
-    }
+    // for(var i=0; i < this.circles.length; i++) {
+    //   this.graphics.fillCircleShape(this.circles[i]);
+    // }
     // if (isRotated) {
     //   this.graphics.fillCircleShape(new Phaser.Geom.Circle(gameOptions.pixelsWide/2, pixelsTall-25, 25));
     // } else {
@@ -131,49 +132,79 @@ function makeNode(scene) {
 
   var setCircle = function(x,y,r) {
     if (!obj.circle) {
-      obj.circle = new Phaser.Geom.Circle(x, y, r);
+      //obj.circle = new Phaser.Geom.Circle(x, y, r);
+      obj.circle = scene.add.circle(x, y, r, 0x00ff00);
       scene.circles.push(obj.circle);
 
       //TODO - need to convert Phaser.Geom.Circle to Phaser.GameObjects.Ellipse
-      // obj.circle.setInteractive().on('pointerdown', function(){
-      //   console.log('click');
-      //   obj.addReply(makeNode());
-      //   rootNode.setPosition(0);
-      // })
+      obj.circle.setInteractive().on('pointerdown', function(){
+        console.log('click');
+        obj.addReply(makeNode(scene));
+        rootNode.setPosition(0);
+      })
     } else {
-      obj.circle.setTo(x, y, r);
+      scene.tweens.add({
+        targets: obj.circle,
+        x: x,
+        y: y,
+        radius: r,
+        duration: gameOptions.newNodeTweenDuration
+      })
+      // obj.circle.setPosition(x,y);
+      // obj.circle.setRadius(r);
     }
   }
 
-  var setLine = function(parentCircle) {
+  var setLine = function(parentX, parentY, x, y, oldParentX, oldParentY) {
+    var toLine = new Phaser.Geom.Line(parentX, parentY, x, y);
+    var toPoint = toLine.getPoint(.5);
+    //debugger
+
     if (!obj.line) {
-      obj.line = new Phaser.Geom.Line(obj.circle.x, obj.circle.y, parentCircle.x, parentCircle.y);
+      obj.line = new Phaser.Geom.Line(oldParentX, oldParentY, x, y);
       scene.lines.push(obj.line);
+      scene.tweens.add({
+        targets: obj.line,
+        x1: parentX,
+        y1: parentY,
+        duration: gameOptions.newNodeTweenDuration
+      })
     } else {
-      obj.line.setTo(obj.circle.x, obj.circle,y, parentCircle.x, parentCircle.y);
+      scene.tweens.add({
+        targets: obj.line,
+        x1: parentX,
+        y1: parentY,
+        x2: x,
+        y2: y,
+        duration: gameOptions.newNodeTweenDuration
+      });
+      //obj.line.setTo(parentX, parentY, x, y);
     }
   }
 
-  obj.setPosition = function(depth, lowerAngle, angleRange, parentCircle) {
+  obj.setPosition = function(depth, lowerAngle, angleRange, parentX, parentY, oldParentX, oldParentY) {
     depth = depth || 0
     lowerAngle = lowerAngle || 0
     angleRange = angleRange || 1
+    var x, y;
 
     if (!depth || depth < 1) {
-      setCircle(gameOptions.pixelsWide / 2, gameOptions.pixelsWide / 2, 30);
+      x = gameOptions.pixelsWide / 2;
+      y = x;
+      setCircle(x, y, 30);
     } else {
       var avgAngle = lowerAngle + angleRange/2;
       var offsetMultiplier = 1 - 1 / depth;
-      var x = (Math.cos(avgAngle * 2 * Math.PI) * offsetMultiplier + 1) * gameOptions.pixelsWide / 2;
-      var y = (Math.sin(avgAngle * 2 * Math.PI) * offsetMultiplier + 1) * gameOptions.pixelsWide / 2;
+      x = (Math.cos(avgAngle * 2 * Math.PI) * offsetMultiplier + 1) * gameOptions.pixelsWide / 2;
+      y = (Math.sin(avgAngle * 2 * Math.PI) * offsetMultiplier + 1) * gameOptions.pixelsWide / 2;
       setCircle(x,y,15);
-      setLine(parentCircle);
+      setLine(parentX, parentY, x, y, oldParentX, oldParentY);
     }
     var myCount = obj.subtreeCount();
     var totalSpanned = 0;
     for(var i = 0; i < obj.replies.length; i++) {
       var thisSpanned = angleRange * obj.replies[i].subtreeCount() / myCount;
-      obj.replies[i].setPosition(depth+1, lowerAngle + totalSpanned, thisSpanned, obj.circle);
+      obj.replies[i].setPosition(depth+1, lowerAngle + totalSpanned, thisSpanned, x, y, obj.circle.x, obj.circle.y);
       totalSpanned+= thisSpanned;
     }
   }
@@ -208,36 +239,36 @@ function resizeGame() {
   canvas.style.width = windowWidth+"px";
   canvas.style.height = windowHeight+"px";
 
-  if (game.scene.scenes.length > 1) {
-    if (windowRatio <= 1) {
-      if (!isRotated) {
-        //rotate everything counter-clockwise into portrait
-        for(var i = 0; i < game.scene.scenes[1].circles.length; i++) {
-          var c = game.scene.scenes[1].circles[i];
-          game.scene.scenes[1].tweens.add({
-            targets: c,
-            x: gameOptions.pixelsWide - c.y,
-            y: c.x,
-            duration: 100
-          })
-        }
-        isRotated = true;
-      }
-    }
-    else {
-      if (isRotated) {
-        // rotate everything clockwise into landscape
-        for(var i = 0; i < game.scene.scenes[1].circles.length; i++) {
-          var c = game.scene.scenes[1].circles[i];
-          game.scene.scenes[1].tweens.add({
-            targets: c,
-            x: c.y,
-            y: gameOptions.pixelsWide - c.x,
-            duration: 100
-          })
-        }
-        isRotated = false;
-      }
-    }
-  }
+  // if (game.scene.scenes.length > 1) {
+  //   if (windowRatio <= 1) {
+  //     if (!isRotated) {
+  //       //rotate everything counter-clockwise into portrait
+  //       for(var i = 0; i < game.scene.scenes[1].circles.length; i++) {
+  //         var c = game.scene.scenes[1].circles[i];
+  //         game.scene.scenes[1].tweens.add({
+  //           targets: c,
+  //           x: gameOptions.pixelsWide - c.y,
+  //           y: c.x,
+  //           duration: 100
+  //         })
+  //       }
+  //       isRotated = true;
+  //     }
+  //   }
+  //   else {
+  //     if (isRotated) {
+  //       // rotate everything clockwise into landscape
+  //       for(var i = 0; i < game.scene.scenes[1].circles.length; i++) {
+  //         var c = game.scene.scenes[1].circles[i];
+  //         game.scene.scenes[1].tweens.add({
+  //           targets: c,
+  //           x: c.y,
+  //           y: gameOptions.pixelsWide - c.x,
+  //           duration: 100
+  //         })
+  //       }
+  //       isRotated = false;
+  //     }
+  //   }
+  // }
 }
