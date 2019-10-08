@@ -50,18 +50,35 @@ class playGame extends Phaser.Scene {
     // this.add.image(tilePosition.x, tilePosition.y, "tree_tiles", treeSprite.leaf).setOrigin(0,0);
     rootNode = makeNode(this);
     rootNode.addReply(makeNode(this));
-    rootNode.addReply(makeNode(this));
+    rootNode.replies[0].addReply(makeNode(this));
+    rootNode.replies[0].addReply(makeNode(this));
+    rootNode.replies[0].addReply(makeNode(this));
+    rootNode.replies[0].replies[2].addReply(makeNode(this));
+    rootNode.replies[0].replies[2].addReply(makeNode(this));
+    rootNode.replies[0].addReply(makeNode(this));
     rootNode.addReply(makeNode(this));
     rootNode.replies[1].addReply(makeNode(this));
     rootNode.replies[1].addReply(makeNode(this));
+    rootNode.replies[1].replies[1].addReply(makeNode(this));
+    rootNode.replies[1].replies[1].addReply(makeNode(this));
+    rootNode.replies[1].replies[1].replies[1].addReply(makeNode(this));
+    rootNode.replies[1].replies[1].replies[1].addReply(makeNode(this));
+    rootNode.replies[1].replies[1].replies[1].addReply(makeNode(this));
+    rootNode.replies[1].replies[1].replies[0].addReply(makeNode(this));
+    rootNode.replies[1].replies[1].replies[0].addReply(makeNode(this));
+    rootNode.replies[1].replies[1].replies[0].addReply(makeNode(this));
+    rootNode.replies[1].replies[1].replies[0].addReply(makeNode(this));
+    rootNode.replies[1].replies[1].replies[0].addReply(makeNode(this));
+    rootNode.addReply(makeNode(this));
 
     // rootNode.replies.push(makeNode());
     // rootNode.replies.push(makeNode());
     // rootNode.replies.push(makeNode());
     // rootNode.replies.push(makeNode());
 
-    this.graphics = this.add.graphics({fillStyle: { color: 0x00ff00 } });
+    this.graphics = this.add.graphics({fillStyle: { color: 0x00ff00 }, lineStyle: { width: 2, color: 0x00ffff }});
     this.circles = [];
+    this.lines = [];
 
     rootNode.setPosition(0);
     // this.circles.push(new Phaser.Geom.Circle(100, 100, 25));
@@ -72,14 +89,17 @@ class playGame extends Phaser.Scene {
 
   update() {
     this.graphics.clear();
+    for(var i=0; i < this.lines.length; i++) {
+      this.graphics.strokeLineShape(this.lines[i]);
+    }
     for(var i=0; i < this.circles.length; i++) {
       this.graphics.fillCircleShape(this.circles[i]);
     }
-    if (isRotated) {
-      this.graphics.fillCircleShape(new Phaser.Geom.Circle(gameOptions.pixelsWide/2, pixelsTall-25, 25));
-    } else {
-      this.graphics.fillCircleShape(new Phaser.Geom.Circle(pixelsTall-25, gameOptions.pixelsWide/2, 25));
-    }
+    // if (isRotated) {
+    //   this.graphics.fillCircleShape(new Phaser.Geom.Circle(gameOptions.pixelsWide/2, pixelsTall-25, 25));
+    // } else {
+    //   this.graphics.fillCircleShape(new Phaser.Geom.Circle(pixelsTall-25, gameOptions.pixelsWide/2, 25));
+    // }
   }
 }
 
@@ -93,6 +113,7 @@ var gameConfig = {
 function makeNode(scene) {
   var obj = {
     circle: null,
+    line: null,
     replies: []
   }
 
@@ -100,6 +121,7 @@ function makeNode(scene) {
     obj.replies.push(node);
   }
 
+  //TODO - this badly needs some caching
   obj.subtreeCount = function() {
     var count = 1;
     for(var i = 0; i < obj.replies.length; i++)
@@ -111,12 +133,28 @@ function makeNode(scene) {
     if (!obj.circle) {
       obj.circle = new Phaser.Geom.Circle(x, y, r);
       scene.circles.push(obj.circle);
+
+      //TODO - need to convert Phaser.Geom.Circle to Phaser.GameObjects.Ellipse
+      // obj.circle.setInteractive().on('pointerdown', function(){
+      //   console.log('click');
+      //   obj.addReply(makeNode());
+      //   rootNode.setPosition(0);
+      // })
     } else {
       obj.circle.setTo(x, y, r);
     }
   }
 
-  obj.setPosition = function(depth, lowerAngle, angleRange) {
+  var setLine = function(parentCircle) {
+    if (!obj.line) {
+      obj.line = new Phaser.Geom.Line(obj.circle.x, obj.circle.y, parentCircle.x, parentCircle.y);
+      scene.lines.push(obj.line);
+    } else {
+      obj.line.setTo(obj.circle.x, obj.circle,y, parentCircle.x, parentCircle.y);
+    }
+  }
+
+  obj.setPosition = function(depth, lowerAngle, angleRange, parentCircle) {
     depth = depth || 0
     lowerAngle = lowerAngle || 0
     angleRange = angleRange || 1
@@ -125,13 +163,19 @@ function makeNode(scene) {
       setCircle(gameOptions.pixelsWide / 2, gameOptions.pixelsWide / 2, 30);
     } else {
       var avgAngle = lowerAngle + angleRange/2;
-      var offsetMultiplier = depth / 4;
+      var offsetMultiplier = 1 - 1 / depth;
       var x = (Math.cos(avgAngle * 2 * Math.PI) * offsetMultiplier + 1) * gameOptions.pixelsWide / 2;
       var y = (Math.sin(avgAngle * 2 * Math.PI) * offsetMultiplier + 1) * gameOptions.pixelsWide / 2;
       setCircle(x,y,15);
+      setLine(parentCircle);
     }
-    for(var i = 0; i < obj.replies.length; i++)
-      obj.replies[i].setPosition(depth+1, lowerAngle + angleRange * i / obj.replies.length, angleRange / obj.replies.length);
+    var myCount = obj.subtreeCount();
+    var totalSpanned = 0;
+    for(var i = 0; i < obj.replies.length; i++) {
+      var thisSpanned = angleRange * obj.replies[i].subtreeCount() / myCount;
+      obj.replies[i].setPosition(depth+1, lowerAngle + totalSpanned, thisSpanned, obj.circle);
+      totalSpanned+= thisSpanned;
+    }
   }
 
   return obj
