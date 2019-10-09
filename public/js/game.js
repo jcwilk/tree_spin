@@ -82,10 +82,6 @@ class playGame extends Phaser.Scene {
     this.lines = [];
 
     rootNode.setPosition(0);
-    // this.circles.push(new Phaser.Geom.Circle(100, 100, 25));
-    // this.circles.push(new Phaser.Geom.Circle(700, 100, 50));
-    // this.circles.push(new Phaser.Geom.Circle(700, 700, 75));
-    // this.circles.push(new Phaser.Geom.Circle(100, 700, 100));
   }
 
   update() {
@@ -132,11 +128,9 @@ function makeNode(scene) {
 
   var setCircle = function(x,y,r) {
     if (!obj.circle) {
-      //obj.circle = new Phaser.Geom.Circle(x, y, r);
       obj.circle = scene.add.circle(x, y, r, 0x00ff00);
       scene.circles.push(obj.circle);
 
-      //TODO - need to convert Phaser.Geom.Circle to Phaser.GameObjects.Ellipse
       obj.circle.setInteractive().on('pointerdown', function(){
         console.log('click');
         obj.addReply(makeNode(scene));
@@ -150,15 +144,12 @@ function makeNode(scene) {
         radius: r,
         duration: gameOptions.newNodeTweenDuration
       })
-      // obj.circle.setPosition(x,y);
-      // obj.circle.setRadius(r);
     }
   }
 
   var setLine = function(parentX, parentY, x, y, oldParentX, oldParentY) {
     var toLine = new Phaser.Geom.Line(parentX, parentY, x, y);
     var toPoint = toLine.getPoint(.5);
-    //debugger
 
     if (!obj.line) {
       obj.line = new Phaser.Geom.Line(oldParentX, oldParentY, x, y);
@@ -178,7 +169,6 @@ function makeNode(scene) {
         y2: y,
         duration: gameOptions.newNodeTweenDuration
       });
-      //obj.line.setTo(parentX, parentY, x, y);
     }
   }
 
@@ -194,7 +184,7 @@ function makeNode(scene) {
       setCircle(x, y, 30);
     } else {
       var avgAngle = lowerAngle + angleRange/2;
-      var offsetMultiplier = 1 - 1 / depth;
+      var offsetMultiplier = 1 - 1 / Math.pow(depth,.75); //TODO - this needs some more love
       x = (Math.cos(avgAngle * 2 * Math.PI) * offsetMultiplier + 1) * gameOptions.pixelsWide / 2;
       y = (Math.sin(avgAngle * 2 * Math.PI) * offsetMultiplier + 1) * gameOptions.pixelsWide / 2;
       setCircle(x,y,15);
