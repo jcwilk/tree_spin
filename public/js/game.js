@@ -10,6 +10,10 @@ var gameOptions = {
 var pixelsTall = gameOptions.pixelsWide;
 var zoomLevel = .75;
 
+var getZoomX = function() {
+  return (pixelsTall - gameOptions.pixelsWide / 2) / 2 + gameOptions.pixelsWide / 2;
+}
+
 var gameUtils = {}
 // gameUtils.getTilePosition = function(col, row) {
 //   var posX = gameOptions.tileSize * col;
@@ -37,6 +41,8 @@ class bootGame extends Phaser.Scene {
 }
 
 var rootNode;
+var focusCircle;
+var plusButton;
 
 class playGame extends Phaser.Scene {
   constructor() {
@@ -78,11 +84,23 @@ class playGame extends Phaser.Scene {
     // rootNode.replies.push(makeNode());
     // rootNode.replies.push(makeNode());
 
+    focusCircle = this.add.circle(getZoomX(), gameOptions.pixelsWide / 2, 40, 0x0000ff);
+    focusCircle.alpha = 0;
+
+
+
     this.graphics = this.add.graphics({lineStyle: { width: 2, color: 0x00ffff }}); //{fillStyle: { color: 0x00ff00 },
     this.circles = [];
     this.lines = [];
 
+    var plus = [5,0,10,0,10,5,15,5,15,10,10,10,10,15,5,15,5,10,0,10,0,5,5,5];
+    plusButton = this.add.polygon(focusCircle.x+30, focusCircle.y-15, plus, 0xff00ff);
+    plusButton.setScale(2);
+    plusButton.setInteractive();
+    plusButton.alpha = 0;
+
     rootNode.storeAngles();
+    rootNode.placeGraphics();
   }
 
   update() {
@@ -141,10 +159,24 @@ function makeNode(scene) {
         console.log('click');
         angleOffset = -obj.angle;
         zoomLevel = depthToZoom(obj.depth);
-        //obj.addReply(makeNode(scene));
-        //rootNode.storeAngles();
         rootNode.placeGraphics();
-      })
+        focusCircle.alpha = 0;
+        plusButton.alpha = 0;
+        scene.tweens.add({
+          targets: [focusCircle,plusButton],
+          alpha: 1,
+          duration: gameOptions.newNodeTweenDuration
+        })
+
+        plusButton.removeListener('pointerdown');
+        plusButton.on('pointerdown', function(){
+          obj.addReply(makeNode(scene));
+          rootNode.storeAngles();
+          angleOffset = -obj.angle;
+          zoomLevel = depthToZoom(obj.depth);
+          rootNode.placeGraphics();
+        });
+      });
     } else {
       scene.tweens.add({
         targets: obj.circle,
@@ -198,10 +230,6 @@ function makeNode(scene) {
       var thisSpanned = angleRange * obj.replies[i].subtreeCount() / (myCount-1);
       obj.replies[i].storeAngles(lowerAngle + totalSpanned, thisSpanned);
       totalSpanned+= thisSpanned;
-    }
-
-    if (obj.isRoot()) {
-      obj.placeGraphics();
     }
   }
 
