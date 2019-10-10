@@ -4,7 +4,7 @@ var gameOptions = {
   //the canvas size will scale according to the window size but it will always seem this wide to the game logic
   //the long dimension will adjust automatically, see pixelsTall below
   pixelsWide: 800,
-  newNodeTweenDuration: 100
+  newNodeTweenDuration: 500
 }
 
 var pixelsTall = gameOptions.pixelsWide;
@@ -107,6 +107,8 @@ var gameConfig = {
   //backgroundColor: 0x00ffff
 }
 
+var angleOffset = 0;
+
 function makeNode(scene) {
   var obj = {
     circle: null,
@@ -136,15 +138,17 @@ function makeNode(scene) {
 
       obj.circle.setInteractive().on('pointerdown', function(){
         console.log('click');
-        obj.addReply(makeNode(scene));
-        rootNode.storeAngles();
+        angleOffset = -obj.angle;
+        //obj.addReply(makeNode(scene));
+        //rootNode.storeAngles();
+        rootNode.placeGraphics();
       })
     } else {
       scene.tweens.add({
         targets: obj.circle,
         x: x,
         y: y,
-        radius: r,
+        r: r,
         duration: gameOptions.newNodeTweenDuration
       })
     }
@@ -189,7 +193,7 @@ function makeNode(scene) {
     var myCount = obj.subtreeCount();
     var totalSpanned = 0;
     for(var i = 0; i < obj.replies.length; i++) {
-      var thisSpanned = angleRange * obj.replies[i].subtreeCount() / myCount;
+      var thisSpanned = angleRange * obj.replies[i].subtreeCount() / (myCount-1);
       obj.replies[i].storeAngles(lowerAngle + totalSpanned, thisSpanned);
       totalSpanned+= thisSpanned;
     }
@@ -208,11 +212,18 @@ function makeNode(scene) {
       y = x;
       setCircle(x, y, 30);
     } else {
-      var avgAngle = obj.angle;
+      var avgAngle = obj.angle + angleOffset;
       var offsetMultiplier = 1 - 1 / Math.pow(obj.depth,.75); //TODO - this needs some more love
       x = (Math.cos(avgAngle * 2 * Math.PI) * offsetMultiplier + 1) * gameOptions.pixelsWide / 2;
       y = (Math.sin(avgAngle * 2 * Math.PI) * offsetMultiplier + 1) * gameOptions.pixelsWide / 2;
-      setCircle(x,y,15);
+
+      if (x > gameOptions.pixelsWide / 2) {
+        //TODO - clean this shit up lol worked the first try though yolo
+        x = gameOptions.pixelsWide / 2 + (x - gameOptions.pixelsWide / 2) * (pixelsTall - gameOptions.pixelsWide / 2)  / (gameOptions.pixelsWide / 2);
+      }
+
+      var size = 1/(obj.depth)*40;
+      setCircle(x,y,size);
       setLine(parentX, parentY, x, y, oldParentX, oldParentY);
     }
     for(var i = 0; i < obj.replies.length; i++) {
