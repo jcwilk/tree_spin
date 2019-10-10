@@ -81,7 +81,7 @@ class playGame extends Phaser.Scene {
     this.circles = [];
     this.lines = [];
 
-    rootNode.setPosition(0);
+    rootNode.storeAngles();
   }
 
   update() {
@@ -111,10 +111,13 @@ function makeNode(scene) {
   var obj = {
     circle: null,
     line: null,
+    depth: 0,
+    angle: null, // 0 to 1
     replies: []
   }
 
   obj.addReply = function(node) {
+    node.depth = obj.depth+1;
     obj.replies.push(node);
   }
 
@@ -134,7 +137,7 @@ function makeNode(scene) {
       obj.circle.setInteractive().on('pointerdown', function(){
         console.log('click');
         obj.addReply(makeNode(scene));
-        rootNode.setPosition(0);
+        rootNode.storeAngles();
       })
     } else {
       scene.tweens.add({
@@ -150,7 +153,6 @@ function makeNode(scene) {
   var setLine = function(parentX, parentY, x, y, oldParentX, oldParentY) {
     var toLine = new Phaser.Geom.Line(parentX, parentY, x, y);
     var toPoint = toLine.getPoint(.5);
-
     if (!obj.line) {
       obj.line = new Phaser.Geom.Line(oldParentX, oldParentY, x, y);
       scene.lines.push(obj.line);
@@ -172,30 +174,49 @@ function makeNode(scene) {
     }
   }
 
-  obj.setPosition = function(depth, lowerAngle, angleRange, parentX, parentY, oldParentX, oldParentY) {
-    depth = depth || 0
+  obj.isRoot = function() {
+    return !(obj.depth > 0); //if undefined, assume root
+  }
+
+  // Basically recalculates where all the branches should be, do this after the tree changes
+  obj.storeAngles = function(lowerAngle, angleRange) {
     lowerAngle = lowerAngle || 0
     angleRange = angleRange || 1
-    var x, y;
 
-    if (!depth || depth < 1) {
-      x = gameOptions.pixelsWide / 2;
-      y = x;
-      setCircle(x, y, 30);
-    } else {
-      var avgAngle = lowerAngle + angleRange/2;
-      var offsetMultiplier = 1 - 1 / Math.pow(depth,.75); //TODO - this needs some more love
-      x = (Math.cos(avgAngle * 2 * Math.PI) * offsetMultiplier + 1) * gameOptions.pixelsWide / 2;
-      y = (Math.sin(avgAngle * 2 * Math.PI) * offsetMultiplier + 1) * gameOptions.pixelsWide / 2;
-      setCircle(x,y,15);
-      setLine(parentX, parentY, x, y, oldParentX, oldParentY);
+    if (!obj.isRoot()) {
+      obj.angle = lowerAngle + angleRange/2;
     }
     var myCount = obj.subtreeCount();
     var totalSpanned = 0;
     for(var i = 0; i < obj.replies.length; i++) {
       var thisSpanned = angleRange * obj.replies[i].subtreeCount() / myCount;
-      obj.replies[i].setPosition(depth+1, lowerAngle + totalSpanned, thisSpanned, x, y, obj.circle.x, obj.circle.y);
+      obj.replies[i].storeAngles(lowerAngle + totalSpanned, thisSpanned);
       totalSpanned+= thisSpanned;
+    }
+
+    if (obj.isRoot()) {
+      obj.placeGraphics();
+    }
+  }
+
+  // Basically recalculates where all the branches should be, do this after the tree changes
+  obj.placeGraphics = function(parentX, parentY, oldParentX, oldParentY) {
+    var x, y;
+
+    if (obj.isRoot()) {
+      x = gameOptions.pixelsWide / 2;
+      y = x;
+      setCircle(x, y, 30);
+    } else {
+      var avgAngle = obj.angle;
+      var offsetMultiplier = 1 - 1 / Math.pow(obj.depth,.75); //TODO - this needs some more love
+      x = (Math.cos(avgAngle * 2 * Math.PI) * offsetMultiplier + 1) * gameOptions.pixelsWide / 2;
+      y = (Math.sin(avgAngle * 2 * Math.PI) * offsetMultiplier + 1) * gameOptions.pixelsWide / 2;
+      setCircle(x,y,15);
+      setLine(parentX, parentY, x, y, oldParentX, oldParentY);
+    }
+    for(var i = 0; i < obj.replies.length; i++) {
+      obj.replies[i].placeGraphics(x, y, obj.circle.x, obj.circle.y);
     }
   }
 
