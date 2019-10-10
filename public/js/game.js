@@ -277,7 +277,6 @@ window.onload = function() {
   game = new Phaser.Game(gameConfig);
   window.focus();
   resizeGame();
-  resizeGame();
   window.addEventListener("resize",resizeGame);
 }
 
@@ -300,6 +299,10 @@ function resizeGame() {
   //NB - setting it to 100% makes it look ugly mid-resize
   canvas.style.width = windowWidth+"px";
   canvas.style.height = windowHeight+"px";
+
+  // This does nothing, but appears to be required to avoid a bug where Objects
+  // can't be clicked on until rotating the screen
+  game.scale.setGameSize(game.scale.gameSize.width, game.scale.gameSize.height);
 
   // if (game.scene.scenes.length > 1) {
   //   if (windowRatio <= 1) {
