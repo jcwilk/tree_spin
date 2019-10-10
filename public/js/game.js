@@ -8,6 +8,7 @@ var gameOptions = {
 }
 
 var pixelsTall = gameOptions.pixelsWide;
+var zoomLevel = .75;
 
 var gameUtils = {}
 // gameUtils.getTilePosition = function(col, row) {
@@ -139,6 +140,7 @@ function makeNode(scene) {
       obj.circle.setInteractive().on('pointerdown', function(){
         console.log('click');
         angleOffset = -obj.angle;
+        zoomLevel = depthToZoom(obj.depth);
         //obj.addReply(makeNode(scene));
         //rootNode.storeAngles();
         rootNode.placeGraphics();
@@ -203,6 +205,15 @@ function makeNode(scene) {
     }
   }
 
+  var depthToOffset = function(depth) {
+    return 1 - 1 / Math.pow(depth,zoomLevel);
+  }
+
+  var depthToZoom = function(depth) {
+    var offset = .5;
+    return Math.log(1 / (1 - offset)) / Math.log(depth);
+  }
+
   // Basically recalculates where all the branches should be, do this after the tree changes
   obj.placeGraphics = function(parentX, parentY, oldParentX, oldParentY) {
     var x, y;
@@ -213,7 +224,7 @@ function makeNode(scene) {
       setCircle(x, y, 30);
     } else {
       var avgAngle = obj.angle + angleOffset;
-      var offsetMultiplier = 1 - 1 / Math.pow(obj.depth,.75); //TODO - this needs some more love
+      var offsetMultiplier = depthToOffset(obj.depth); //TODO - this needs some more love
       x = (Math.cos(avgAngle * 2 * Math.PI) * offsetMultiplier + 1) * gameOptions.pixelsWide / 2;
       y = (Math.sin(avgAngle * 2 * Math.PI) * offsetMultiplier + 1) * gameOptions.pixelsWide / 2;
 
