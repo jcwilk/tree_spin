@@ -275,7 +275,8 @@ function makeNode(scene) {
 
 window.onload = function() {
   game = new Phaser.Game(gameConfig);
-  window.focus()
+  window.focus();
+  resizeGame();
   resizeGame();
   window.addEventListener("resize",resizeGame);
 }
@@ -287,10 +288,6 @@ function resizeGame() {
   var windowHeight = window.innerHeight;
   var windowRatio = windowWidth / windowHeight;
 
-  //NB - setting it to 100% makes it look ugly mid-resize
-  canvas.style.width = windowWidth+"px";
-  canvas.style.height = windowHeight+"px";
-
   if (windowWidth < windowHeight) {
     pixelsTall = Math.floor(gameOptions.pixelsWide / windowRatio);
     game.scale.setGameSize(gameOptions.pixelsWide, pixelsTall);
@@ -300,7 +297,9 @@ function resizeGame() {
     game.scale.setGameSize(pixelsTall, gameOptions.pixelsWide);
   }
 
-
+  //NB - setting it to 100% makes it look ugly mid-resize
+  canvas.style.width = windowWidth+"px";
+  canvas.style.height = windowHeight+"px";
 
   // if (game.scene.scenes.length > 1) {
   //   if (windowRatio <= 1) {
