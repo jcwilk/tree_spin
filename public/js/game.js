@@ -348,38 +348,38 @@ function resizeGame() {
   // can't be clicked on until rotating the screen
   game.scale.setGameSize(game.scale.gameSize.width, game.scale.gameSize.height);
 
-  if (rootNode) {
-    if (windowRatio <= 1) {
-      if (!isRotated) {
-        //rotate everything counter-clockwise into portrait
-        // for(var i = 0; i < game.scene.scenes[1].circles.length; i++) {
-        //   var c = game.scene.scenes[1].circles[i];
-        //   game.scene.scenes[1].tweens.add({
-        //     targets: c,
-        //     x: gameOptions.pixelsWide - c.y,
-        //     y: c.x,
-        //     duration: 100
-        //   })
-        // }
-        isRotated = true;
-      }
+  if (windowRatio <= 1) {
+    if (!isRotated) {
+      //rotate everything counter-clockwise into portrait
+      // for(var i = 0; i < game.scene.scenes[1].circles.length; i++) {
+      //   var c = game.scene.scenes[1].circles[i];
+      //   game.scene.scenes[1].tweens.add({
+      //     targets: c,
+      //     x: gameOptions.pixelsWide - c.y,
+      //     y: c.x,
+      //     duration: 100
+      //   })
+      // }
+      isRotated = true;
     }
-    else {
-      if (isRotated) {
-        // rotate everything clockwise into landscape
-        // for(var i = 0; i < game.scene.scenes[1].circles.length; i++) {
-        //   var c = game.scene.scenes[1].circles[i];
-        //   game.scene.scenes[1].tweens.add({
-        //     targets: c,
-        //     x: c.y,
-        //     y: gameOptions.pixelsWide - c.x,
-        //     duration: 100
-        //   })
-        // }
-        isRotated = false;
-      }
+  }
+  else {
+    if (isRotated) {
+      // rotate everything clockwise into landscape
+      // for(var i = 0; i < game.scene.scenes[1].circles.length; i++) {
+      //   var c = game.scene.scenes[1].circles[i];
+      //   game.scene.scenes[1].tweens.add({
+      //     targets: c,
+      //     x: c.y,
+      //     y: gameOptions.pixelsWide - c.x,
+      //     duration: 100
+      //   })
+      // }
+      isRotated = false;
     }
+  }
 
+  if (rootNode) {
     rootNode.placeGraphics();
     repositionFocus();
   }
