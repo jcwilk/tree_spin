@@ -270,12 +270,12 @@ function makeNode(scene) {
   }
 
   var depthToOffset = function(depth) {
-    return 1 - 1 / Math.pow(depth,zoomLevel);
+    return 1 - 1 / Math.pow(depth+1,zoomLevel);
   }
 
   var depthToZoom = function(depth) {
     var offset = .5;
-    return Math.log(1 / (1 - offset)) / Math.log(depth);
+    return Math.log(1 / (1 - offset)) / Math.log(depth+1);
   }
 
   var skewAngleAwayTowardsFocus = function(angle) {
@@ -296,7 +296,7 @@ function makeNode(scene) {
     if (obj.isRoot()) {
       x = gameOptions.pixelsWide / 2;
       y = x;
-      setCircle(x, y, 30);
+      setCircle(x, y, 40);
     } else {
       var avgAngle = (obj.angle + angleOffset) % 1;
       avgAngle = skewAngleAwayTowardsFocus(avgAngle);
@@ -310,7 +310,7 @@ function makeNode(scene) {
       x = stretched.x;
       y = stretched.y;
 
-      var size = 1/(obj.depth)*40;
+      var size = 1/(obj.depth+1)*40;
       setCircle(x,y,size);
       setLine(parentX, parentY, x, y, oldParentX, oldParentY);
     }
@@ -353,13 +353,18 @@ function resizeGame() {
     game.scale.setGameSize(pixelsTall, gameOptions.pixelsWide);
   }
 
-  //NB - setting it to 100% makes it look ugly mid-resize
+  // https://phaser.discourse.group/t/am-i-using-setgamesize-wrong-not-working-as-expected/3890/4
+  // so simple! wish i found this sooner...
+  // .....NOPE! Spoke too soon, this does some weird zoomed in shit
+  //game.scale.displaySize.resize(windowWidth, windowHeight);
+
   canvas.style.width = windowWidth+"px";
   canvas.style.height = windowHeight+"px";
 
-  // This does nothing, but appears to be required to avoid a bug where Objects
-  // can't be clicked on until rotating the screen
   game.scale.setGameSize(game.scale.gameSize.width, game.scale.gameSize.height);
+
+  // if we ever do physics then this will be needed too
+  //game.physics.world.setBounds(0, 0, windowWidth, windowHeight);
 
   if (windowRatio <= 1) {
     if (!isRotated) {
