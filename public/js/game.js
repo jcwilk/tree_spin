@@ -285,7 +285,7 @@ function makeNode(scene) {
       return Math.sqrt((angle - .5) * 2) / 2 + .5;
     }
     else {
-      return Math.sqrt(angle * 2) / 2;
+      return .5 - Math.sqrt((.5 - angle) * 2) / 2;
     }
   }
 
