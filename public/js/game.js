@@ -278,6 +278,17 @@ function makeNode(scene) {
     return Math.log(1 / (1 - offset)) / Math.log(depth);
   }
 
+  var skewAngleAwayTowardsFocus = function(angle) {
+    //return angle;
+    angle = ((angle % 1) + 1) % 1;
+    if (angle > .5) {
+      return Math.sqrt((angle - .5) * 2) / 2 + .5;
+    }
+    else {
+      return Math.sqrt(angle * 2) / 2;
+    }
+  }
+
   // Basically recalculates where all the branches should be, do this after the tree changes
   obj.placeGraphics = function(parentX, parentY, oldParentX, oldParentY) {
     var x, y;
@@ -287,7 +298,9 @@ function makeNode(scene) {
       y = x;
       setCircle(x, y, 30);
     } else {
-      var avgAngle = obj.angle + angleOffset - rotator.landscapeAngle(0);
+      var avgAngle = (obj.angle + angleOffset) % 1;
+      avgAngle = skewAngleAwayTowardsFocus(avgAngle);
+      avgAngle = avgAngle - rotator.landscapeAngle(0);
       var offsetMultiplier = depthToOffset(obj.depth); //TODO - this needs some more love
       x = (Math.cos(avgAngle * 2 * Math.PI) * offsetMultiplier + 1) * gameOptions.pixelsWide / 2;
       y = (Math.sin(avgAngle * 2 * Math.PI) * offsetMultiplier + 1) * gameOptions.pixelsWide / 2;
