@@ -10,8 +10,43 @@ var gameOptions = {
 var pixelsTall = gameOptions.pixelsWide;
 var zoomLevel = .75;
 
-var getZoomX = function() {
+var getZoomOffset = function() {
   return (pixelsTall - gameOptions.pixelsWide / 2) / 2 + gameOptions.pixelsWide / 2;
+}
+
+var rotator = {
+  // takes in coords as if x was the long dimension, meaning it rotates if not
+  landscape: function(x, y) {
+    if (isRotated) {
+      return new Phaser.Geom.Point(gameOptions.pixelsWide - y, x);
+    } else {
+      return new Phaser.Geom.Point(x,y);
+    }
+  },
+  landscapeAngle: function(angle) {
+    if (isRotated) {
+      return angle - .25;
+    } else {
+      return angle;
+    }
+  },
+  circleStretch: function(x,y) {
+    if (isRotated) {
+      if (y > gameOptions.pixelsWide / 2) {
+        //TODO - clean this shit up lol worked the first try though yolo
+        y = gameOptions.pixelsWide / 2 + (y - gameOptions.pixelsWide / 2) * (pixelsTall - gameOptions.pixelsWide / 2)  / (gameOptions.pixelsWide / 2);
+      }
+    } else {
+      if (x > gameOptions.pixelsWide / 2) {
+        //TODO - clean this shit up lol worked the first try though yolo
+        x = gameOptions.pixelsWide / 2 + (x - gameOptions.pixelsWide / 2) * (pixelsTall - gameOptions.pixelsWide / 2)  / (gameOptions.pixelsWide / 2);
+      }
+    }
+    return new Phaser.Geom.Point(x,y);
+  }
+  // xyReverse: function(x, y) {
+  //   return new Phaser.Geom.Point();
+  // }
 }
 
 var gameUtils = {}
@@ -84,7 +119,8 @@ class playGame extends Phaser.Scene {
     // rootNode.replies.push(makeNode());
     // rootNode.replies.push(makeNode());
 
-    focusCircle = this.add.circle(getZoomX(), gameOptions.pixelsWide / 2, 40, 0x0000ff);
+    var focusPoint = rotator.landscape(getZoomOffset(), gameOptions.pixelsWide / 2);
+    focusCircle = this.add.circle(focusPoint.x, focusPoint.y, 40, 0x0000ff);
     focusCircle.alpha = 0;
 
 
@@ -189,8 +225,8 @@ function makeNode(scene) {
   }
 
   var setLine = function(parentX, parentY, x, y, oldParentX, oldParentY) {
-    var toLine = new Phaser.Geom.Line(parentX, parentY, x, y);
-    var toPoint = toLine.getPoint(.5);
+    // var toLine = new Phaser.Geom.Line(parentX, parentY, x, y);
+    // var toPoint = toLine.getPoint(.5);
     if (!obj.line) {
       obj.line = new Phaser.Geom.Line(oldParentX, oldParentY, x, y);
       scene.lines.push(obj.line);
@@ -218,7 +254,7 @@ function makeNode(scene) {
 
   // Basically recalculates where all the branches should be, do this after the tree changes
   obj.storeAngles = function(lowerAngle, angleRange) {
-    lowerAngle = lowerAngle || 0
+    lowerAngle = lowerAngle || 0;
     angleRange = angleRange || 1
 
     if (!obj.isRoot()) {
@@ -251,15 +287,15 @@ function makeNode(scene) {
       y = x;
       setCircle(x, y, 30);
     } else {
-      var avgAngle = obj.angle + angleOffset;
+      var avgAngle = obj.angle + angleOffset - rotator.landscapeAngle(0);
       var offsetMultiplier = depthToOffset(obj.depth); //TODO - this needs some more love
       x = (Math.cos(avgAngle * 2 * Math.PI) * offsetMultiplier + 1) * gameOptions.pixelsWide / 2;
       y = (Math.sin(avgAngle * 2 * Math.PI) * offsetMultiplier + 1) * gameOptions.pixelsWide / 2;
 
-      if (x > gameOptions.pixelsWide / 2) {
-        //TODO - clean this shit up lol worked the first try though yolo
-        x = gameOptions.pixelsWide / 2 + (x - gameOptions.pixelsWide / 2) * (pixelsTall - gameOptions.pixelsWide / 2)  / (gameOptions.pixelsWide / 2);
-      }
+      var stretched = rotator.circleStretch(x,y);
+
+      x = stretched.x;
+      y = stretched.y;
 
       var size = 1/(obj.depth)*40;
       setCircle(x,y,size);
@@ -278,6 +314,14 @@ window.onload = function() {
   window.focus();
   resizeGame();
   window.addEventListener("resize",resizeGame);
+}
+
+function repositionFocus() {
+  if (focusCircle) {
+    var focusPoint = rotator.landscape(getZoomOffset(), gameOptions.pixelsWide / 2);
+    focusCircle.setPosition(focusPoint.x, focusPoint.y);
+    plusButton.setPosition(focusCircle.x+30, focusCircle.y-15);
+  }
 }
 
 var isRotated = false; //true when in portrait mode
@@ -304,36 +348,39 @@ function resizeGame() {
   // can't be clicked on until rotating the screen
   game.scale.setGameSize(game.scale.gameSize.width, game.scale.gameSize.height);
 
-  // if (game.scene.scenes.length > 1) {
-  //   if (windowRatio <= 1) {
-  //     if (!isRotated) {
-  //       //rotate everything counter-clockwise into portrait
-  //       for(var i = 0; i < game.scene.scenes[1].circles.length; i++) {
-  //         var c = game.scene.scenes[1].circles[i];
-  //         game.scene.scenes[1].tweens.add({
-  //           targets: c,
-  //           x: gameOptions.pixelsWide - c.y,
-  //           y: c.x,
-  //           duration: 100
-  //         })
-  //       }
-  //       isRotated = true;
-  //     }
-  //   }
-  //   else {
-  //     if (isRotated) {
-  //       // rotate everything clockwise into landscape
-  //       for(var i = 0; i < game.scene.scenes[1].circles.length; i++) {
-  //         var c = game.scene.scenes[1].circles[i];
-  //         game.scene.scenes[1].tweens.add({
-  //           targets: c,
-  //           x: c.y,
-  //           y: gameOptions.pixelsWide - c.x,
-  //           duration: 100
-  //         })
-  //       }
-  //       isRotated = false;
-  //     }
-  //   }
-  // }
+  if (rootNode) {
+    if (windowRatio <= 1) {
+      if (!isRotated) {
+        //rotate everything counter-clockwise into portrait
+        // for(var i = 0; i < game.scene.scenes[1].circles.length; i++) {
+        //   var c = game.scene.scenes[1].circles[i];
+        //   game.scene.scenes[1].tweens.add({
+        //     targets: c,
+        //     x: gameOptions.pixelsWide - c.y,
+        //     y: c.x,
+        //     duration: 100
+        //   })
+        // }
+        isRotated = true;
+      }
+    }
+    else {
+      if (isRotated) {
+        // rotate everything clockwise into landscape
+        // for(var i = 0; i < game.scene.scenes[1].circles.length; i++) {
+        //   var c = game.scene.scenes[1].circles[i];
+        //   game.scene.scenes[1].tweens.add({
+        //     targets: c,
+        //     x: c.y,
+        //     y: gameOptions.pixelsWide - c.x,
+        //     duration: 100
+        //   })
+        // }
+        isRotated = false;
+      }
+    }
+
+    rootNode.placeGraphics();
+    repositionFocus();
+  }
 }
