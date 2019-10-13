@@ -43,6 +43,59 @@ var rotator = {
       }
     }
     return new Phaser.Geom.Point(x,y);
+  },
+
+  goDown: function() {
+    var nextNode;
+    if (isRotated) {
+      nextNode = focusedNode.getChild();
+    } else {
+      nextNode = focusedNode.getOlderSister();
+    }
+    if (nextNode) {
+      nextNode.focus();
+    }
+  },
+  goUp: function() {
+    var nextNode;
+    if (isRotated) {
+      nextNode = focusedNode.getParent();
+    } else {
+      nextNode = focusedNode.getYoungerSister();
+    }
+    if (nextNode) {
+      nextNode.focus();
+    }
+  },
+  goLeft: function() {
+    var nextNode;
+    if (isRotated) {
+      nextNode = focusedNode.getOlderSister();
+    } else {
+      nextNode = focusedNode.getParent();
+    }
+    if (nextNode) {
+      nextNode.focus();
+    }
+  },
+  goRight: function() {
+    var nextNode;
+    if (isRotated) {
+      nextNode = focusedNode.getYoungerSister();
+    } else {
+      nextNode = focusedNode.getChild();
+    }
+    if (nextNode) {
+      nextNode.focus();
+    }
+  },
+  getControlsCenter: function() {
+    var offset = 100;
+    if (isRotated) {
+      return new Phaser.Geom.Point(offset, pixelsTall-offset);
+    } else {
+      return new Phaser.Geom.Point(pixelsTall-offset, gameOptions.pixelsWide-offset);
+    }
   }
   // xyReverse: function(x, y) {
   //   return new Phaser.Geom.Point();
@@ -78,6 +131,17 @@ class bootGame extends Phaser.Scene {
 var rootNode;
 var focusCircle;
 var plusButton;
+var focusedNode;
+
+var downKey;
+var upKey;
+var leftKey;
+var rightKey;
+
+var upArrow;
+var downArrow;
+var leftArrow;
+var rightArrow;
 
 class playGame extends Phaser.Scene {
   constructor() {
@@ -135,11 +199,47 @@ class playGame extends Phaser.Scene {
     plusButton.setInteractive();
     plusButton.alpha = 0;
 
+    var arrow = [0,0,20,0,10,10];
+    var arrowScale = 4;
+    upArrow = this.add.polygon(0,0,arrow, 0xff0000);
+    upArrow.rotation = Math.PI;
+    upArrow.setScale(arrowScale);
+    upArrow.setInteractive().on('pointerdown',rotator.goUp);
+    downArrow = this.add.polygon(0,0,arrow, 0xff0000);
+    downArrow.setScale(arrowScale);
+    downArrow.setInteractive().on('pointerdown',rotator.goDown);
+    leftArrow = this.add.polygon(0,0,arrow, 0xff0000);
+    leftArrow.rotation = Math.PI/2;
+    leftArrow.setScale(arrowScale);
+    leftArrow.setInteractive().on('pointerdown',rotator.goLeft);
+    rightArrow = this.add.polygon(0,0,arrow, 0xff0000);
+    rightArrow.rotation = 3*Math.PI/2;
+    rightArrow.setScale(arrowScale);
+    rightArrow.setInteractive().on('pointerdown',rotator.goRight);
+    repositionControls();
+
     rootNode.storeAngles();
     rootNode.placeGraphics();
+
+    downKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
+    upKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
+    leftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT);
+    rightKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT);
   }
 
   update() {
+    if (focusedNode) {
+      if (Phaser.Input.Keyboard.JustDown(leftKey)) {
+        rotator.goLeft();
+      } else if (Phaser.Input.Keyboard.JustDown(rightKey)) {
+        rotator.goRight();
+      } else if (Phaser.Input.Keyboard.JustDown(downKey)) {
+        rotator.goDown();
+      } else if (Phaser.Input.Keyboard.JustDown(upKey)) {
+        rotator.goUp();
+      }
+    }
+
     this.graphics.clear();
     for(var i=0; i < this.lines.length; i++) {
       this.graphics.strokeLineShape(this.lines[i]);
@@ -168,13 +268,77 @@ function makeNode(scene) {
   var obj = {
     circle: null,
     line: null,
-    depth: 0,
+    path: [],
     angle: null, // 0 to 1
     replies: []
+  };
+
+  obj.isLeaf = function() {
+    return obj.replies.length < 1;
+  }
+
+  obj.getDepth = function() {
+    return obj.path.length;
+  }
+
+  obj.getNodeFromPath = function(path) {
+    if (path.length < 1) {
+      return obj;
+    } else if (path[0] < obj.replies.length) {
+      return obj.replies[path[0]].getNodeFromPath(path.slice(1));
+    } else {
+      return false;
+    }
+  }
+
+  obj.getParent = function() {
+    if (obj.isRoot()) {
+      return false;
+    } else {
+      return rootNode.getNodeFromPath(obj.path.slice(0,obj.path.length-1));
+    }
+  }
+
+  obj.getChild = function() {
+    if (obj.isLeaf()) {
+      return false;
+    } else {
+      return obj.replies[Math.floor(obj.replies.length/2)];
+    }
+  }
+
+  obj.getYoungerSister = function() {
+    if (obj.isRoot()) {
+      return false;
+    } else {
+      var myIndex = obj.path[obj.path.length-1];
+      if (myIndex < 1) {
+        return false;
+      } else {
+        var parent = obj.getParent();
+        return parent.replies[myIndex - 1];
+      }
+    }
+  }
+
+  obj.getOlderSister = function() {
+    if (obj.isRoot()) {
+      return false;
+    } else {
+      var myIndex = obj.path[obj.path.length-1];
+      var parent = obj.getParent();
+      if (myIndex > parent.replies.length - 2) {
+        return false;
+      } else {
+        return parent.replies[myIndex + 1];
+      }
+    }
   }
 
   obj.addReply = function(node) {
     node.depth = obj.depth+1;
+    node.path = obj.path.slice(0);
+    node.path.push(obj.replies.length);
     obj.replies.push(node);
   }
 
@@ -186,33 +350,36 @@ function makeNode(scene) {
     return count;
   }
 
+  obj.focus = function() {
+    angleOffset = -obj.angle;
+    zoomLevel = depthToZoom(obj.getDepth());
+    focusedNode = obj;
+
+    rootNode.placeGraphics();
+    focusCircle.alpha = 0;
+    plusButton.alpha = 0;
+    scene.tweens.add({
+      targets: [focusCircle,plusButton],
+      alpha: 1,
+      duration: gameOptions.newNodeTweenDuration
+    })
+
+    plusButton.removeListener('pointerdown');
+    plusButton.on('pointerdown', function(){
+      obj.addReply(makeNode(scene));
+      rootNode.storeAngles();
+      angleOffset = -obj.angle;
+      zoomLevel = depthToZoom(obj.getDepth());
+      rootNode.placeGraphics();
+    });
+  }
+
   var setCircle = function(x,y,r) {
     if (!obj.circle) {
       obj.circle = scene.add.circle(x, y, r, 0x00ff00);
       scene.circles.push(obj.circle);
 
-      obj.circle.setInteractive().on('pointerdown', function(){
-        console.log('click');
-        angleOffset = -obj.angle;
-        zoomLevel = depthToZoom(obj.depth);
-        rootNode.placeGraphics();
-        focusCircle.alpha = 0;
-        plusButton.alpha = 0;
-        scene.tweens.add({
-          targets: [focusCircle,plusButton],
-          alpha: 1,
-          duration: gameOptions.newNodeTweenDuration
-        })
-
-        plusButton.removeListener('pointerdown');
-        plusButton.on('pointerdown', function(){
-          obj.addReply(makeNode(scene));
-          rootNode.storeAngles();
-          angleOffset = -obj.angle;
-          zoomLevel = depthToZoom(obj.depth);
-          rootNode.placeGraphics();
-        });
-      });
+      obj.circle.setInteractive().on('pointerdown', obj.focus);
     } else {
       scene.tweens.add({
         targets: obj.circle,
@@ -249,7 +416,7 @@ function makeNode(scene) {
   }
 
   obj.isRoot = function() {
-    return !(obj.depth > 0); //if undefined, assume root
+    return obj.getDepth() < 1;
   }
 
   // Basically recalculates where all the branches should be, do this after the tree changes
@@ -301,7 +468,7 @@ function makeNode(scene) {
       var avgAngle = (obj.angle + angleOffset) % 1;
       avgAngle = skewAngleAwayTowardsFocus(avgAngle);
       avgAngle = avgAngle - rotator.landscapeAngle(0);
-      var offsetMultiplier = depthToOffset(obj.depth); //TODO - this needs some more love
+      var offsetMultiplier = depthToOffset(obj.getDepth()); //TODO - this needs some more love
       x = (Math.cos(avgAngle * 2 * Math.PI) * offsetMultiplier + 1) * gameOptions.pixelsWide / 2;
       y = (Math.sin(avgAngle * 2 * Math.PI) * offsetMultiplier + 1) * gameOptions.pixelsWide / 2;
 
@@ -310,7 +477,7 @@ function makeNode(scene) {
       x = stretched.x;
       y = stretched.y;
 
-      var size = 1/(obj.depth+1)*40;
+      var size = 1/(obj.getDepth()+1)*40;
       setCircle(x,y,size);
       setLine(parentX, parentY, x, y, oldParentX, oldParentY);
     }
@@ -327,6 +494,17 @@ window.onload = function() {
   window.focus();
   resizeGame();
   window.addEventListener("resize",resizeGame);
+}
+
+function repositionControls() {
+  var controlsCenter = rotator.getControlsCenter();
+
+  var offset = 70;
+
+  leftArrow.setPosition(controlsCenter.x - offset, controlsCenter.y);
+  rightArrow.setPosition(controlsCenter.x + offset, controlsCenter.y);
+  upArrow.setPosition(controlsCenter.x, controlsCenter.y - offset);
+  downArrow.setPosition(controlsCenter.x, controlsCenter.y + offset);
 }
 
 function repositionFocus() {
@@ -398,6 +576,8 @@ function resizeGame() {
   }
 
   if (rootNode) {
+    repositionControls();
+
     rootNode.placeGraphics();
     repositionFocus();
   }
