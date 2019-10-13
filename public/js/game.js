@@ -9,9 +9,13 @@ var gameOptions = {
 
 var pixelsTall = gameOptions.pixelsWide;
 var zoomLevel = .75;
+var focusLevel = 2;
 
 var getZoomOffset = function() {
-  return (pixelsTall - gameOptions.pixelsWide / 2) / 2 + gameOptions.pixelsWide / 2;
+  if (focusLevel > 0)
+    return (pixelsTall - gameOptions.pixelsWide / 2) / 2 + gameOptions.pixelsWide / 2;
+  else
+    return 3 * gameOptions.pixelsWide / 4;
 }
 
 var rotator = {
@@ -125,6 +129,24 @@ var rotator = {
       upArrow.fillColor = color;
     }
   },
+  getFocusControlsLess: function() {
+    var offset = 100;
+
+    if (isRotated) {
+      return new Phaser.Geom.Point(gameOptions.pixelsWide - offset*2, pixelsTall - offset);
+    } else {
+      return new Phaser.Geom.Point(pixelsTall - offset, offset*2);
+    }
+  },
+  getFocusControlsMore: function() {
+    var offset = 100;
+
+    if (isRotated) {
+      return new Phaser.Geom.Point(gameOptions.pixelsWide - offset, pixelsTall - offset);
+    } else {
+      return new Phaser.Geom.Point(pixelsTall - offset, offset);
+    }
+  }
   // xyReverse: function(x, y) {
   //   return new Phaser.Geom.Point();
   // }
@@ -170,6 +192,9 @@ var upArrow;
 var downArrow;
 var leftArrow;
 var rightArrow;
+
+var focusMoreArrow;
+var focusLessArrow;
 
 class playGame extends Phaser.Scene {
   constructor() {
@@ -245,6 +270,33 @@ class playGame extends Phaser.Scene {
     rightArrow.setScale(arrowScale);
     rightArrow.setInteractive().on('pointerdown',rotator.goRight);
     repositionControls();
+
+    var focusArrowScale = 6;
+    focusMoreArrow = this.add.polygon(0,0,arrow, 0x0000ff);
+    focusMoreArrow.rotation = Math.PI;
+    focusMoreArrow.setScale(focusArrowScale);
+    focusMoreArrow.setInteractive().on('pointerdown', function() {
+      if (focusLevel < 2) {
+        console.log('up');
+        focusLevel++;
+        rootNode.placeGraphics();
+        updateFocusControlsBlocked();
+        repositionFocus();
+      }
+    });
+    focusLessArrow = this.add.polygon(0,0,arrow, 0x0000ff);
+    focusLessArrow.setScale(focusArrowScale);
+    focusLessArrow.setInteractive().on('pointerdown', function() {
+      if (focusLevel > 0) {
+        console.log('down');
+        focusLevel--;
+        rootNode.placeGraphics();
+        updateFocusControlsBlocked();
+        repositionFocus();
+      }
+    });
+    updateFocusControlsBlocked();
+    repositionFocusControls();
 
     rootNode.storeAngles();
     rootNode.placeGraphics();
@@ -500,16 +552,20 @@ function makeNode(scene) {
       setCircle(x, y, 40);
     } else {
       var avgAngle = (obj.angle + angleOffset) % 1;
-      avgAngle = skewAngleAwayTowardsFocus(avgAngle);
+
+      if (focusLevel > 1)
+        avgAngle = skewAngleAwayTowardsFocus(avgAngle);
+
       avgAngle = avgAngle - rotator.landscapeAngle(0);
       var offsetMultiplier = depthToOffset(obj.getDepth()); //TODO - this needs some more love
       x = (Math.cos(avgAngle * 2 * Math.PI) * offsetMultiplier + 1) * gameOptions.pixelsWide / 2;
       y = (Math.sin(avgAngle * 2 * Math.PI) * offsetMultiplier + 1) * gameOptions.pixelsWide / 2;
 
-      var stretched = rotator.circleStretch(x,y);
-
-      x = stretched.x;
-      y = stretched.y;
+      if (focusLevel > 0) {
+        var stretched = rotator.circleStretch(x,y);
+        x = stretched.x;
+        y = stretched.y;
+      }
 
       var size = 1/(obj.getDepth()+1)*40;
       setCircle(x,y,size);
@@ -540,7 +596,13 @@ function repositionControls() {
   upArrow.setPosition(controlsCenter.x, controlsCenter.y - offset);
   downArrow.setPosition(controlsCenter.x, controlsCenter.y + offset);
 }
-getYoungerSister
+
+function repositionFocusControls() {
+  var less = rotator.getFocusControlsLess();
+  var more = rotator.getFocusControlsMore();
+  focusLessArrow.setPosition(less.x, less.y);
+  focusMoreArrow.setPosition(more.x, more.y);
+}
 
 function updateControlsBlocked() {
   if (focusedNode.getParent().isRoot())
@@ -562,6 +624,20 @@ function updateControlsBlocked() {
     rotator.setControlsYounger(0x00ff00);
   else
     rotator.setControlsYounger(0xff0000);
+}
+
+function updateFocusControlsBlocked() {
+  if (focusLevel >= 2) {
+    focusMoreArrow.fillColor = 0xff0000;
+    focusLessArrow.fillColor = 0x0000ff;
+  }
+  else if (focusLevel <= 0) {
+    focusMoreArrow.fillColor = 0x0000ff;
+    focusLessArrow.fillColor = 0xff0000;
+  } else {
+    focusMoreArrow.fillColor = 0x0000ff;
+    focusLessArrow.fillColor = 0x0000ff;
+  }
 }
 
 function repositionFocus() {
@@ -634,6 +710,7 @@ function resizeGame() {
 
   if (rootNode) {
     repositionControls();
+    repositionFocusControls();
 
     rootNode.placeGraphics();
     repositionFocus();
