@@ -221,6 +221,8 @@ class playGame extends Phaser.Scene {
     rootNode.storeAngles();
     rootNode.placeGraphics();
 
+    rootNode.getChild().focus();
+
     downKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
     upKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
     leftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT);
@@ -351,27 +353,29 @@ function makeNode(scene) {
   }
 
   obj.focus = function() {
-    angleOffset = -obj.angle;
-    zoomLevel = depthToZoom(obj.getDepth());
-    focusedNode = obj;
-
-    rootNode.placeGraphics();
-    focusCircle.alpha = 0;
-    plusButton.alpha = 0;
-    scene.tweens.add({
-      targets: [focusCircle,plusButton],
-      alpha: 1,
-      duration: gameOptions.newNodeTweenDuration
-    })
-
-    plusButton.removeListener('pointerdown');
-    plusButton.on('pointerdown', function(){
-      obj.addReply(makeNode(scene));
-      rootNode.storeAngles();
+    if (!obj.isRoot()) {
       angleOffset = -obj.angle;
       zoomLevel = depthToZoom(obj.getDepth());
+      focusedNode = obj;
+
       rootNode.placeGraphics();
-    });
+      focusCircle.alpha = 0;
+      plusButton.alpha = 0;
+      scene.tweens.add({
+        targets: [focusCircle,plusButton],
+        alpha: 1,
+        duration: gameOptions.newNodeTweenDuration
+      })
+
+      plusButton.removeListener('pointerdown');
+      plusButton.on('pointerdown', function(){
+        obj.addReply(makeNode(scene));
+        rootNode.storeAngles();
+        angleOffset = -obj.angle;
+        zoomLevel = depthToZoom(obj.getDepth());
+        rootNode.placeGraphics();
+      });
+    }
   }
 
   var setCircle = function(x,y,r) {
