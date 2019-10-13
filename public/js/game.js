@@ -96,7 +96,35 @@ var rotator = {
     } else {
       return new Phaser.Geom.Point(pixelsTall-offset, gameOptions.pixelsWide-offset);
     }
-  }
+  },
+  setControlsUpstream: function(color) {
+    if (isRotated) {
+      upArrow.fillColor = color;
+    } else {
+      leftArrow.fillColor = color;
+    }
+  },
+  setControlsDownstream: function(color) {
+    if (isRotated) {
+      downArrow.fillColor = color;
+    } else {
+      rightArrow.fillColor = color;
+    }
+  },
+  setControlsOlder: function(color) {
+    if (isRotated) {
+      leftArrow.fillColor = color;
+    } else {
+      downArrow.fillColor = color;
+    }
+  },
+  setControlsYounger: function(color) {
+    if (isRotated) {
+      rightArrow.fillColor = color;
+    } else {
+      upArrow.fillColor = color;
+    }
+  },
   // xyReverse: function(x, y) {
   //   return new Phaser.Geom.Point();
   // }
@@ -359,6 +387,8 @@ function makeNode(scene) {
       focusedNode = obj;
 
       rootNode.placeGraphics();
+      updateControlsBlocked();
+
       focusCircle.alpha = 0;
       plusButton.alpha = 0;
       scene.tweens.add({
@@ -509,6 +539,29 @@ function repositionControls() {
   rightArrow.setPosition(controlsCenter.x + offset, controlsCenter.y);
   upArrow.setPosition(controlsCenter.x, controlsCenter.y - offset);
   downArrow.setPosition(controlsCenter.x, controlsCenter.y + offset);
+}
+getYoungerSister
+
+function updateControlsBlocked() {
+  if (focusedNode.getParent().isRoot())
+    rotator.setControlsUpstream(0xff0000);
+  else
+    rotator.setControlsUpstream(0x00ffff);
+
+  if (focusedNode.getChild())
+    rotator.setControlsDownstream(0x00ffff);
+  else
+    rotator.setControlsDownstream(0xff0000);
+
+  if (focusedNode.getOlderSister())
+    rotator.setControlsOlder(0x00ff00);
+  else
+    rotator.setControlsOlder(0xff0000);
+
+  if (focusedNode.getYoungerSister())
+    rotator.setControlsYounger(0x00ff00);
+  else
+    rotator.setControlsYounger(0xff0000);
 }
 
 function repositionFocus() {
