@@ -444,6 +444,9 @@ function makeNode(scene) {
 
   obj.focus = function() {
     if (!obj.isRoot()) {
+      if (obj.audio) {
+        obj.audio.play();
+      }
       angleOffset = -obj.angle;
       zoomLevel = depthToZoom(obj.getDepth());
       focusedNode = obj;
@@ -461,12 +464,31 @@ function makeNode(scene) {
 
       plusButton.removeListener('pointerdown');
       plusButton.on('pointerdown', function(){
-        obj.addReply(makeNode(scene));
-        rootNode.storeAngles();
-        angleOffset = -obj.angle;
-        zoomLevel = depthToZoom(obj.getDepth());
-        rootNode.placeGraphics();
-        updateControlsBlocked();
+        startRecord(function(audio){
+          var reply = makeNode(scene);
+          reply.audio = audio;
+          obj.addReply(reply);
+          rootNode.storeAngles();
+          angleOffset = -obj.angle;
+          zoomLevel = depthToZoom(obj.getDepth());
+          rootNode.placeGraphics();
+          updateControlsBlocked();
+        });
+        //const recorder = await recordAudio();
+        //recorder.start();
+        plusButton.on('pointerup', function(){
+          stopRecord();
+          //const audio = await recorder.stop();
+          //audio.play();
+          // var reply = makeNode(scene);
+          // //reply.audio = audio;
+          // obj.addReply(reply);
+          // rootNode.storeAngles();
+          // angleOffset = -obj.angle;
+          // zoomLevel = depthToZoom(obj.getDepth());
+          // rootNode.placeGraphics();
+          // updateControlsBlocked();
+        });
       });
     }
   }
@@ -664,6 +686,92 @@ function repositionAddReply() {
     plusButton.setPosition(replyPoint.x, replyPoint.y);
   }
 }
+
+// var rec;
+// var audio;
+// navigator.mediaDevices.getUserMedia({audio:true})
+// 	.then(stream => {
+// 		rec = new MediaRecorder(stream);
+// 		rec.ondataavailable = e => {
+// 			audioChunks.push(e.data);
+// 			if (rec.state == "inactive"){
+//         //var blob = new Blob(audioChunks,{type:'audio/x-mpeg-3'});
+//         var audioBlob = new Blob(audioChunks);
+//         var audioUrl = URL.createObjectURL(audioBlob);
+//         console.log('ya')
+//         audio = new Audio(audioUrl);
+//         // recordedAudio.src = URL.createObjectURL(blob);
+//         // recordedAudio.controls=true;
+//         // recordedAudio.autoplay=true;
+//         // audioDownload.href = recordedAudio.src;
+//         // audioDownload.download = 'mp3';
+//         // audioDownload.innerHTML = 'download';
+//      }
+// 		}
+// 	})
+// 	.catch(e=>console.log(e));
+
+var mediaRecorder;
+function startRecord(onComplete) {
+  // audioChunks = [];
+  // rec.start();
+  // console.log('start')
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    console.log('getUserMedia supported.');
+    navigator.mediaDevices.getUserMedia (
+      // constraints - only audio needed for this app
+      {
+         audio: true
+      })
+
+      // Success callback
+      .then(function(stream) {
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.start();
+        console.log(mediaRecorder.state);
+        console.log("recorder started");
+        var chunks = [];
+
+        mediaRecorder.ondataavailable = function(e) {
+          chunks.push(e.data);
+        }
+        mediaRecorder.onstop = function(e) {
+          var blob = new Blob(chunks, { 'type' : 'audio/ogg; codecs=opus' });
+          chunks = [];
+          var audioURL = window.URL.createObjectURL(blob);
+          onComplete(new Audio(audioURL));
+        }
+      })
+
+      // Error callback
+      .catch(function(err) {
+         console.log('The following getUserMedia error occured: ' + err);
+      }
+    );
+  } else {
+    console.log('getUserMedia not supported on your browser!');
+  }
+}
+
+function stopRecord() {
+  mediaRecorder.stop();
+  console.log(mediaRecorder.state);
+  console.log("recorder stopped");
+}
+
+// var recorder;
+// var audio;
+// async function testRecord() {
+//   recorder = await recordAudio();
+//   recorder.start();
+//
+//   const audio = await recorder.stop();
+// }
+//
+// async function testRecordStop() {
+//   audio = await recorder.stop();
+// }
+
 
 var isRotated = false; //true when in portrait mode
 function resizeGame() {
