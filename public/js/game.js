@@ -474,9 +474,11 @@ function makeNode(scene) {
           rootNode.placeGraphics();
           updateControlsBlocked();
         });
+        plusButton.removeListener('pointerup');
         //const recorder = await recordAudio();
         //recorder.start();
         plusButton.on('pointerup', function(){
+          console.log('pointerup');
           stopRecord();
           //const audio = await recorder.stop();
           //audio.play();
@@ -716,7 +718,29 @@ function startRecord(onComplete) {
   // audioChunks = [];
   // rec.start();
   // console.log('start')
-  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+  var doRecording = function() {
+    mediaRecorder.start();
+    console.log(mediaRecorder.state);
+    console.log("recorder started");
+    var chunks = [];
+
+    mediaRecorder.ondataavailable = function(e) {
+      chunks.push(e.data);
+    }
+    mediaRecorder.onstop = function(e) {
+      console.log('stop');
+      var blob = new Blob(chunks, { 'type' : 'audio/ogg; codecs=opus' });
+      chunks = [];
+      var audioURL = window.URL.createObjectURL(blob);
+      onComplete(new Audio(audioURL));
+    }
+  }
+
+  if (mediaRecorder) {
+    //debugger;
+    doRecording();
+    //debugger;
+  } else if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
     console.log('getUserMedia supported.');
     navigator.mediaDevices.getUserMedia (
       // constraints - only audio needed for this app
@@ -727,20 +751,7 @@ function startRecord(onComplete) {
       // Success callback
       .then(function(stream) {
         mediaRecorder = new MediaRecorder(stream);
-        mediaRecorder.start();
-        console.log(mediaRecorder.state);
-        console.log("recorder started");
-        var chunks = [];
-
-        mediaRecorder.ondataavailable = function(e) {
-          chunks.push(e.data);
-        }
-        mediaRecorder.onstop = function(e) {
-          var blob = new Blob(chunks, { 'type' : 'audio/ogg; codecs=opus' });
-          chunks = [];
-          var audioURL = window.URL.createObjectURL(blob);
-          onComplete(new Audio(audioURL));
-        }
+        doRecording();
       })
 
       // Error callback
