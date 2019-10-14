@@ -146,6 +146,15 @@ var rotator = {
     } else {
       return new Phaser.Geom.Point(pixelsTall - offset, offset);
     }
+  },
+  getReplyCenter: function() {
+    var offset = 100;
+
+    if (isRotated) {
+      return new Phaser.Geom.Point(gameOptions.pixelsWide / 2, pixelsTall - offset);
+    } else {
+      return new Phaser.Geom.Point(pixelsTall - offset, gameOptions.pixelsWide / 2);
+    }
   }
   // xyReverse: function(x, y) {
   //   return new Phaser.Geom.Point();
@@ -247,8 +256,8 @@ class playGame extends Phaser.Scene {
     this.lines = [];
 
     var plus = [5,0,10,0,10,5,15,5,15,10,10,10,10,15,5,15,5,10,0,10,0,5,5,5];
-    plusButton = this.add.polygon(focusCircle.x+30, focusCircle.y-15, plus, 0xff00ff);
-    plusButton.setScale(2);
+    plusButton = this.add.polygon(0, 0, plus, 0xff00ff);
+    plusButton.setScale(8);
     plusButton.setInteractive();
     plusButton.alpha = 0;
 
@@ -297,6 +306,7 @@ class playGame extends Phaser.Scene {
     });
     updateFocusControlsBlocked();
     repositionFocusControls();
+    repositionAddReply();
 
     rootNode.storeAngles();
     rootNode.placeGraphics();
@@ -456,6 +466,7 @@ function makeNode(scene) {
         angleOffset = -obj.angle;
         zoomLevel = depthToZoom(obj.getDepth());
         rootNode.placeGraphics();
+        updateControlsBlocked();
       });
     }
   }
@@ -644,7 +655,13 @@ function repositionFocus() {
   if (focusCircle) {
     var focusPoint = rotator.landscape(getZoomOffset(), gameOptions.pixelsWide / 2);
     focusCircle.setPosition(focusPoint.x, focusPoint.y);
-    plusButton.setPosition(focusCircle.x+30, focusCircle.y-15);
+  }
+}
+
+function repositionAddReply() {
+  if (plusButton) {
+    var replyPoint = rotator.getReplyCenter();
+    plusButton.setPosition(replyPoint.x, replyPoint.y);
   }
 }
 
@@ -711,6 +728,8 @@ function resizeGame() {
   if (rootNode) {
     repositionControls();
     repositionFocusControls();
+    repositionAddReply();
+    updateFocusControlsBlocked();
 
     rootNode.placeGraphics();
     repositionFocus();
