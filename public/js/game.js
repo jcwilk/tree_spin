@@ -218,27 +218,27 @@ class playGame extends Phaser.Scene {
     // this.add.image(tilePosition.x, tilePosition.y, "tree_tiles", treeSprite.downNub).setOrigin(0,0);
     // this.add.image(tilePosition.x, tilePosition.y, "tree_tiles", treeSprite.leaf).setOrigin(0,0);
     rootNode = makeNode(this);
-    rootNode.addReply(makeNode(this));
-    rootNode.replies[0].addReply(makeNode(this));
-    rootNode.replies[0].addReply(makeNode(this));
-    rootNode.replies[0].addReply(makeNode(this));
-    rootNode.replies[0].replies[2].addReply(makeNode(this));
-    rootNode.replies[0].replies[2].addReply(makeNode(this));
-    rootNode.replies[0].addReply(makeNode(this));
-    rootNode.addReply(makeNode(this));
-    rootNode.replies[1].addReply(makeNode(this));
-    rootNode.replies[1].addReply(makeNode(this));
-    rootNode.replies[1].replies[1].addReply(makeNode(this));
-    rootNode.replies[1].replies[1].addReply(makeNode(this));
-    rootNode.replies[1].replies[1].replies[1].addReply(makeNode(this));
-    rootNode.replies[1].replies[1].replies[1].addReply(makeNode(this));
-    rootNode.replies[1].replies[1].replies[1].addReply(makeNode(this));
-    rootNode.replies[1].replies[1].replies[0].addReply(makeNode(this));
-    rootNode.replies[1].replies[1].replies[0].addReply(makeNode(this));
-    rootNode.replies[1].replies[1].replies[0].addReply(makeNode(this));
-    rootNode.replies[1].replies[1].replies[0].addReply(makeNode(this));
-    rootNode.replies[1].replies[1].replies[0].addReply(makeNode(this));
-    rootNode.addReply(makeNode(this));
+    // rootNode.addReply(makeNode(this));
+    // rootNode.replies[0].addReply(makeNode(this));
+    // rootNode.replies[0].addReply(makeNode(this));
+    // rootNode.replies[0].addReply(makeNode(this));
+    // rootNode.replies[0].replies[2].addReply(makeNode(this));
+    // rootNode.replies[0].replies[2].addReply(makeNode(this));
+    // rootNode.replies[0].addReply(makeNode(this));
+    // rootNode.addReply(makeNode(this));
+    // rootNode.replies[1].addReply(makeNode(this));
+    // rootNode.replies[1].addReply(makeNode(this));
+    // rootNode.replies[1].replies[1].addReply(makeNode(this));
+    // rootNode.replies[1].replies[1].addReply(makeNode(this));
+    // rootNode.replies[1].replies[1].replies[1].addReply(makeNode(this));
+    // rootNode.replies[1].replies[1].replies[1].addReply(makeNode(this));
+    // rootNode.replies[1].replies[1].replies[1].addReply(makeNode(this));
+    // rootNode.replies[1].replies[1].replies[0].addReply(makeNode(this));
+    // rootNode.replies[1].replies[1].replies[0].addReply(makeNode(this));
+    // rootNode.replies[1].replies[1].replies[0].addReply(makeNode(this));
+    // rootNode.replies[1].replies[1].replies[0].addReply(makeNode(this));
+    // rootNode.replies[1].replies[1].replies[0].addReply(makeNode(this));
+    // rootNode.addReply(makeNode(this));
 
     // rootNode.replies.push(makeNode());
     // rootNode.replies.push(makeNode());
@@ -259,7 +259,18 @@ class playGame extends Phaser.Scene {
     plusButton = this.add.polygon(0, 0, plus, 0xff00ff);
     plusButton.setScale(8);
     plusButton.setInteractive();
-    plusButton.alpha = 0;
+    //plusButton.alpha = 0;
+    // plusButton.on('pointerdown', function(){
+    //   startRecord(function(audio){
+    //     var reply = makeNode(scene);
+    //     reply.audio = audio;
+    //     rootNode.addReply(reply);
+    //     rootNode.storeAngles();
+    //     angleOffset = -obj.angle;
+    //     zoomLevel = depthToZoom(obj.getDepth());
+    //     rootNode.placeGraphics();
+    //     updateControlsBlocked();
+    //   });
 
     var arrow = [0,0,20,0,10,10];
     var arrowScale = 4;
@@ -311,7 +322,7 @@ class playGame extends Phaser.Scene {
     rootNode.storeAngles();
     rootNode.placeGraphics();
 
-    rootNode.getChild().focus();
+    rootNode.focus();
 
     downKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
     upKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
@@ -329,6 +340,9 @@ class playGame extends Phaser.Scene {
         rotator.goDown();
       } else if (Phaser.Input.Keyboard.JustDown(upKey)) {
         rotator.goUp();
+      }
+      if (focusCircle.tween && focusCircle.tween.state == Phaser.Tweens.ACTIVE) {
+        focusCircle.setPosition(focusCircle.fromNode.circle.x + (focusedNode.circle.x - focusCircle.fromNode.circle.x) * focusCircle.tween.progress, focusCircle.fromNode.circle.y + (focusedNode.circle.y - focusCircle.fromNode.circle.y) * focusCircle.tween.progress);
       }
     }
 
@@ -443,24 +457,33 @@ function makeNode(scene) {
   }
 
   obj.focus = function() {
-    if (!obj.isRoot()) {
+    //if (!obj.isRoot()) {
       if (obj.audio) {
         obj.audio.play();
       }
       angleOffset = -obj.angle;
       zoomLevel = depthToZoom(obj.getDepth());
+      var lastFocused = focusedNode;
       focusedNode = obj;
 
       rootNode.placeGraphics();
       updateControlsBlocked();
 
+      if (focusCircle.tween) {
+        focusCircle.tween.stop(1);
+      }
       focusCircle.alpha = 0;
-      plusButton.alpha = 0;
-      scene.tweens.add({
-        targets: [focusCircle,plusButton],
-        alpha: 1,
-        duration: gameOptions.newNodeTweenDuration
-      })
+      //plusButton.alpha = 0;
+      if (!obj.isRoot()) {
+        focusCircle.fromNode = lastFocused;
+        focusCircle.tween = scene.tweens.add({
+          targets: focusCircle,
+          alpha: 1,
+          duration: gameOptions.newNodeTweenDuration
+        }).setCallback('onComplete', function() {
+          focusCircle.setPosition(focusedNode.circle.x, focusedNode.circle.y);
+        }, {});
+      }
 
       plusButton.removeListener('pointerdown');
       plusButton.on('pointerdown', function(){
@@ -492,7 +515,7 @@ function makeNode(scene) {
           // updateControlsBlocked();
         });
       });
-    }
+    //}
   }
 
   var setCircle = function(x,y,r) {
@@ -542,7 +565,7 @@ function makeNode(scene) {
 
   // Basically recalculates where all the branches should be, do this after the tree changes
   obj.storeAngles = function(lowerAngle, angleRange) {
-    lowerAngle = lowerAngle || 0;
+    lowerAngle = lowerAngle || .5;
     angleRange = angleRange || 1
 
     if (!obj.isRoot()) {
@@ -562,6 +585,8 @@ function makeNode(scene) {
   }
 
   var depthToZoom = function(depth) {
+    if (depth < 1)
+      depth = 1;
     var offset = .5;
     return Math.log(1 / (1 - offset)) / Math.log(depth+1);
   }
@@ -640,7 +665,7 @@ function repositionFocusControls() {
 }
 
 function updateControlsBlocked() {
-  if (focusedNode.getParent().isRoot())
+  if (focusedNode.isRoot())
     rotator.setControlsUpstream(0xff0000);
   else
     rotator.setControlsUpstream(0x00ffff);
