@@ -529,7 +529,7 @@ function makeNode(scene) {
       obj.circle = scene.add.circle(x, y, r, 0x00ff00);
       scene.circles.push(obj.circle);
 
-      obj.circle.setInteractive().on('pointerdown', obj.focus);
+      obj.circle.setInteractive().on('pointerdown', obj.select);
     } else {
       scene.tweens.add({
         targets: obj.circle,
