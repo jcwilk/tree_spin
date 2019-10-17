@@ -162,6 +162,20 @@ var rotator = {
   // }
 }
 
+var audioPlayer = (function(){
+  var track;
+
+  return {
+    play: function(newtrack) {
+      if (track) {
+        track.load(); //basically like "stop" rather than pause
+      }
+      track = newTrack;
+      track.play();
+    }
+  }
+})()
+
 var gameUtils = {}
 // gameUtils.getTilePosition = function(col, row) {
 //   var posX = gameOptions.tileSize * col;
@@ -459,7 +473,7 @@ function makeNode(scene) {
 
   obj.select = function() {
     if (obj.audio) {
-      obj.audio.play();
+      audioPlayer.play(obj.audio);
     }
 
     obj.focus();
@@ -496,7 +510,7 @@ function makeNode(scene) {
         reply.audio = audio;
         obj.addReply(reply);
         rootNode.storeAngles();
-        reply.select();
+        reply.focus();
         //angleOffset = -obj.angle;
         //zoomLevel = depthToZoom(obj.getDepth());
         //rootNode.placeGraphics();
