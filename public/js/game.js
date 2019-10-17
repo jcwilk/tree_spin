@@ -4,6 +4,7 @@ var gameOptions = {
   //the canvas size will scale according to the window size but it will always seem this wide to the game logic
   //the long dimension will adjust automatically, see pixelsTall below
   pixelsWide: 800,
+  bottomMargin: 100,
   newNodeTweenDuration: 500
 }
 
@@ -57,7 +58,7 @@ var rotator = {
       nextNode = focusedNode.getOlderSister();
     }
     if (nextNode) {
-      nextNode.focus();
+      nextNode.select();
     }
   },
   goUp: function() {
@@ -68,7 +69,7 @@ var rotator = {
       nextNode = focusedNode.getYoungerSister();
     }
     if (nextNode) {
-      nextNode.focus();
+      nextNode.select();
     }
   },
   goLeft: function() {
@@ -79,7 +80,7 @@ var rotator = {
       nextNode = focusedNode.getParent();
     }
     if (nextNode) {
-      nextNode.focus();
+      nextNode.select();
     }
   },
   goRight: function() {
@@ -90,15 +91,15 @@ var rotator = {
       nextNode = focusedNode.getChild();
     }
     if (nextNode) {
-      nextNode.focus();
+      nextNode.select();
     }
   },
   getControlsCenter: function() {
     var offset = 100;
     if (isRotated) {
-      return new Phaser.Geom.Point(offset, pixelsTall-offset);
+      return new Phaser.Geom.Point(offset, pixelsTall-offset-gameOptions.bottomMargin);
     } else {
-      return new Phaser.Geom.Point(pixelsTall-offset, gameOptions.pixelsWide-offset);
+      return new Phaser.Geom.Point(pixelsTall-offset, gameOptions.pixelsWide-offset-gameOptions.bottomMargin);
     }
   },
   setControlsUpstream: function(color) {
@@ -133,7 +134,7 @@ var rotator = {
     var offset = 100;
 
     if (isRotated) {
-      return new Phaser.Geom.Point(gameOptions.pixelsWide - offset*2, pixelsTall - offset);
+      return new Phaser.Geom.Point(gameOptions.pixelsWide - offset*2, pixelsTall - offset - gameOptions.bottomMargin);
     } else {
       return new Phaser.Geom.Point(pixelsTall - offset, offset*2);
     }
@@ -142,7 +143,7 @@ var rotator = {
     var offset = 100;
 
     if (isRotated) {
-      return new Phaser.Geom.Point(gameOptions.pixelsWide - offset, pixelsTall - offset);
+      return new Phaser.Geom.Point(gameOptions.pixelsWide - offset, pixelsTall - offset - gameOptions.bottomMargin);
     } else {
       return new Phaser.Geom.Point(pixelsTall - offset, offset);
     }
@@ -151,9 +152,9 @@ var rotator = {
     var offset = 100;
 
     if (isRotated) {
-      return new Phaser.Geom.Point(gameOptions.pixelsWide / 2, pixelsTall - offset);
+      return new Phaser.Geom.Point(gameOptions.pixelsWide / 2, pixelsTall - offset - gameOptions.bottomMargin);
     } else {
-      return new Phaser.Geom.Point(pixelsTall - offset, gameOptions.pixelsWide / 2);
+      return new Phaser.Geom.Point(pixelsTall - offset, gameOptions.pixelsWide / 2 - gameOptions.bottomMargin/2);
     }
   }
   // xyReverse: function(x, y) {
@@ -322,7 +323,7 @@ class playGame extends Phaser.Scene {
     rootNode.storeAngles();
     rootNode.placeGraphics();
 
-    rootNode.focus();
+    rootNode.select();
 
     downKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
     upKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
@@ -456,66 +457,57 @@ function makeNode(scene) {
     return count;
   }
 
+  obj.select = function() {
+    if (obj.audio) {
+      obj.audio.play();
+    }
+
+    obj.focus();
+  }
+
   obj.focus = function() {
-    //if (!obj.isRoot()) {
-      if (obj.audio) {
-        obj.audio.play();
-      }
-      angleOffset = -obj.angle;
-      zoomLevel = depthToZoom(obj.getDepth());
-      var lastFocused = focusedNode;
-      focusedNode = obj;
+    angleOffset = -obj.angle;
+    zoomLevel = depthToZoom(obj.getDepth());
+    var lastFocused = focusedNode;
+    focusedNode = obj;
 
-      rootNode.placeGraphics();
-      updateControlsBlocked();
+    rootNode.placeGraphics();
+    updateControlsBlocked();
 
-      if (focusCircle.tween) {
-        focusCircle.tween.stop(1);
-      }
-      focusCircle.alpha = 0;
-      //plusButton.alpha = 0;
-      if (!obj.isRoot()) {
-        focusCircle.fromNode = lastFocused;
-        focusCircle.tween = scene.tweens.add({
-          targets: focusCircle,
-          alpha: 1,
-          duration: gameOptions.newNodeTweenDuration
-        }).setCallback('onComplete', function() {
-          focusCircle.setPosition(focusedNode.circle.x, focusedNode.circle.y);
-        }, {});
-      }
+    if (focusCircle.tween) {
+      focusCircle.tween.stop(1);
+    }
+    focusCircle.alpha = 0;
+    if (!obj.isRoot()) {
+      focusCircle.fromNode = lastFocused;
+      focusCircle.tween = scene.tweens.add({
+        targets: focusCircle,
+        alpha: 1,
+        duration: gameOptions.newNodeTweenDuration
+      }).setCallback('onComplete', function() {
+        focusCircle.setPosition(focusedNode.circle.x, focusedNode.circle.y);
+      }, {});
+    }
 
-      plusButton.removeListener('pointerdown');
-      plusButton.on('pointerdown', function(){
-        startRecord(function(audio){
-          var reply = makeNode(scene);
-          reply.audio = audio;
-          obj.addReply(reply);
-          rootNode.storeAngles();
-          angleOffset = -obj.angle;
-          zoomLevel = depthToZoom(obj.getDepth());
-          rootNode.placeGraphics();
-          updateControlsBlocked();
-        });
-        plusButton.removeListener('pointerup');
-        //const recorder = await recordAudio();
-        //recorder.start();
-        plusButton.on('pointerup', function(){
-          console.log('pointerup');
-          stopRecord();
-          //const audio = await recorder.stop();
-          //audio.play();
-          // var reply = makeNode(scene);
-          // //reply.audio = audio;
-          // obj.addReply(reply);
-          // rootNode.storeAngles();
-          // angleOffset = -obj.angle;
-          // zoomLevel = depthToZoom(obj.getDepth());
-          // rootNode.placeGraphics();
-          // updateControlsBlocked();
-        });
+    plusButton.removeListener('pointerdown');
+    plusButton.on('pointerdown', function(){
+      startRecord(function(audio){
+        var reply = makeNode(scene);
+        reply.audio = audio;
+        obj.addReply(reply);
+        rootNode.storeAngles();
+        reply.select();
+        //angleOffset = -obj.angle;
+        //zoomLevel = depthToZoom(obj.getDepth());
+        //rootNode.placeGraphics();
+        //updateControlsBlocked();
       });
-    //}
+      plusButton.removeListener('pointerup');
+      plusButton.on('pointerup', function(){
+        console.log('pointerup');
+        stopRecord();
+      });
+    });
   }
 
   var setCircle = function(x,y,r) {
@@ -812,17 +804,34 @@ function stopRecord() {
 var isRotated = false; //true when in portrait mode
 function resizeGame() {
   var canvas = document.querySelector("canvas");
+  var marginHor = 0;
+  var marginVert = 0;
   var windowWidth = window.innerWidth;
   var windowHeight = window.innerHeight;
   var windowRatio = windowWidth / windowHeight;
+  const minRatio = 1.5;
 
+  //portrait
   if (windowWidth < windowHeight) {
+    if (windowWidth * minRatio > windowHeight) {
+      marginHor = (windowWidth - windowHeight / minRatio) / 2;
+      windowWidth = windowWidth - marginHor*2;
+      windowRatio = 1/minRatio;
+    }
+
     pixelsTall = Math.floor(gameOptions.pixelsWide / windowRatio);
     game.scale.setGameSize(gameOptions.pixelsWide, pixelsTall);
-  }
-  else {
+    isRotated = true;
+  } else { //landscape
+    if (windowHeight * minRatio > windowWidth) {
+      marginVert = (windowHeight - windowWidth / minRatio) / 2;
+      windowHeight = windowHeight - marginVert*2;
+      windowRatio = minRatio;
+    }
+
     pixelsTall = Math.floor(gameOptions.pixelsWide * windowRatio);
     game.scale.setGameSize(pixelsTall, gameOptions.pixelsWide);
+    isRotated = false;
   }
 
   // https://phaser.discourse.group/t/am-i-using-setgamesize-wrong-not-working-as-expected/3890/4
@@ -832,42 +841,17 @@ function resizeGame() {
 
   canvas.style.width = windowWidth+"px";
   canvas.style.height = windowHeight+"px";
+  console.log(marginVert+','+marginHor);
+  // canvas.style['margin-top'] = marginVert+"px";
+  // canvas.style['margin-bottom'] = marginVert+"px";
+  // canvas.style['margin-left'] = marginHor+"px";
+  // canvas.style['margin-right'] = marginHor+"px";
 
   game.scale.setGameSize(game.scale.gameSize.width, game.scale.gameSize.height);
 
   // if we ever do physics then this will be needed too
   //game.physics.world.setBounds(0, 0, windowWidth, windowHeight);
 
-  if (windowRatio <= 1) {
-    if (!isRotated) {
-      //rotate everything counter-clockwise into portrait
-      // for(var i = 0; i < game.scene.scenes[1].circles.length; i++) {
-      //   var c = game.scene.scenes[1].circles[i];
-      //   game.scene.scenes[1].tweens.add({
-      //     targets: c,
-      //     x: gameOptions.pixelsWide - c.y,
-      //     y: c.x,
-      //     duration: 100
-      //   })
-      // }
-      isRotated = true;
-    }
-  }
-  else {
-    if (isRotated) {
-      // rotate everything clockwise into landscape
-      // for(var i = 0; i < game.scene.scenes[1].circles.length; i++) {
-      //   var c = game.scene.scenes[1].circles[i];
-      //   game.scene.scenes[1].tweens.add({
-      //     targets: c,
-      //     x: c.y,
-      //     y: gameOptions.pixelsWide - c.x,
-      //     duration: 100
-      //   })
-      // }
-      isRotated = false;
-    }
-  }
 
   if (rootNode) {
     repositionControls();
