@@ -166,7 +166,7 @@ var audioPlayer = (function(){
   var track;
 
   return {
-    play: function(newtrack) {
+    play: function(newTrack) {
       if (track) {
         track.load(); //basically like "stop" rather than pause
       }
